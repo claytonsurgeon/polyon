@@ -16,14 +16,16 @@ pub enum Kind {
    BraR,
    //
    // Value,
-   Number,
-   String,
+   // Number,
+   // String,
    //
+   // Input, // you shouldn't need special syntax... this is a lisp after all
+   // label and hitch should also probably be removed
+   Comma,
+   Colon,
+   Semicolon,
    Token,
-   Point, // abc_XYZ
-   Monad, // i32,
-   Label, // i32:
-   Clone, // point-{
+   // Hitch,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,15 +52,10 @@ pub fn tokenizer(input: &String) -> Result<Vec<Token>, String> {
             (Kind::Skip, Regex::new(r"^;.*").unwrap()),
             (Kind::Skip, Regex::new(r"^---.*").unwrap()),
 
-            // (Kind::Number, Regex::new(r"^[[:digit:]]+\.[[:digit:]]+").unwrap()),
-            // (Kind::Number, Regex::new(r"^[[:digit:]]+").unwrap()),
-
-            // (Kind::Value, Regex::new(r#"^[^{}()\[\]:"']*-[{]"#).unwrap()),
-
-            (Kind::Clone, Regex::new(r#"^[^[:space:],{}()\[\]:"']+[[:space:]]*[{]"#).unwrap()),
-            (Kind::Monad, Regex::new(r#"^[^[:space:],{}()\[\]:"']+[,]"#).unwrap()),
-            (Kind::Label, Regex::new(r#"^[^[:space:],{}()\[\]:"']+[:]"#).unwrap()),
-            (Kind::Token, Regex::new(r#"^[^[:space:],{}()\[\]:"']+"#).unwrap()),
+            (Kind::Comma, Regex::new(r#"^[,]"#).unwrap()),
+            (Kind::Colon, Regex::new(r#"^[^[:space:]{}()\[\]:;,"']+[:]"#).unwrap()),
+            (Kind::Semicolon, Regex::new(r#"^[^[:space:]{}()\[\]:;,"']+[;]"#).unwrap()),
+            (Kind::Token, Regex::new(r#"^[^[:space:]{}()\[\]:;,"']+"#).unwrap()),
 
 
             // parens
@@ -74,15 +71,12 @@ pub fn tokenizer(input: &String) -> Result<Vec<Token>, String> {
 
             // (Kind::Value, Regex::new(r#"^"[^"]*("|$)"#).unwrap()),
             (Kind::Token, Regex::new(r#"^"[^"]*(")"#).unwrap()),
-            // (Kind::Token, Regex::new(r##"^#"[^"]*"#"##).unwrap()),
-            // (Kind::Token, Regex::new(r###"^##"[^"]*"##"###).unwrap()),
-            // (Kind::Token, Regex::new(r####"^###"[^"]*"###"####).unwrap()),
-            // (Kind::Token, Regex::new(r#####"^####"[^"]*"####"#####).unwrap()),
-
-
+            (Kind::Semicolon, Regex::new(r#"^"[^"]*(")[;]"#).unwrap()),
+            (Kind::Colon, Regex::new(r#"^"[^"]*(")[:]"#).unwrap()),
 
             (Kind::Invalid, Regex::new(r"^.").unwrap()),
          ];
+
    }
 
    let mut tokens: Vec<Token> = Vec::new();
@@ -110,16 +104,8 @@ pub fn tokenizer(input: &String) -> Result<Vec<Token>, String> {
                      col = 1;
                   }
                   Kind::Skip => {}
-                  Kind::Monad => {
+                  Kind::Colon | Kind::Semicolon => {
                      t.text = t.text[..t.text.len() - 1].to_string();
-                     tokens.push(t);
-                  }
-                  Kind::Label => {
-                     t.text = t.text[..t.text.len() - 1].to_string();
-                     tokens.push(t);
-                  }
-                  Kind::Clone => {
-                     // t.text = t.text[..t.text.len() - 2].to_string();
                      tokens.push(t);
                   }
                   _ => {

@@ -8,9 +8,9 @@ use std::cell::RefCell;
 pub enum Program {
 	Nothing,
 	Element(String),
-	Functor(Vec<Program>, Vec<Program>),
-	// Include(Vec<Program>),
-	Network(String, Vec<Program>, Vec<Program>),
+	Functor(Vec<Program>),
+	Include(Vec<Program>),
+	Network(String, Vec<Program>),
 }
 
 // Program: the composition of
@@ -37,22 +37,21 @@ pub fn parser(tokens: Vec<Token>) -> Result<Program, String> {
 // parser works backwards
 impl State {
 	fn program(&mut self) -> Result<Program, String> {
-		let (programs, networks) = self.collect(&[])?;
-		Ok(Program::Network("program".to_string(), programs, networks))
+		Ok(Program::Network("program".to_string(), self.collect(&[])?))
 	}
 
 	fn network(&mut self) -> Result<Program, String> {
 		self.eat(Kind::ParL)?;
-		let label = self.eat(Kind::Semicolon)?.text.clone();
-		let (programs, networks) = self.collect(&[Kind::ParR])?;
+		let label = self.eat(Kind::Label)?.text.clone();
+		let p = self.collect(&[Kind::ParR])?;
 		self.eat(Kind::ParR)?;
-		Ok(Program::Network(label, programs, networks))
+		Ok(Program::Network(label, p))
 	}
 	fn functor(&mut self) -> Result<Program, String> {
 		self.eat(Kind::ParL)?;
-		let (programs, networks) = self.collect(&[Kind::ParR])?;
+		let p = self.collect(&[Kind::ParR])?;
 		self.eat(Kind::ParR)?;
-		Ok(Program::Functor(programs, networks))
+		Ok(Program::Functor(p))
 	}
 	fn element(&mut self) -> Result<Program, String> {
 		Ok(Program::Element(self.eat(Kind::Token)?.text.clone()))
@@ -62,23 +61,23 @@ impl State {
 		self.eat(Kind::ParR)?;
 		Ok(Program::Nothing)
 	}
-	fn collect(&mut self, stop: &[Kind]) -> Result<(Vec<Program>, Vec<Program>), String> {
-		let mut body = Vec::new();
-		let mut kids = Vec::new();
+	fn collect(&mut self, stop: &[Kind]) -> Result<Vec<Program>, String> {
+		let mut v = Vec::new();
 		while self.until(0, stop) {
-			if self.is(0, Kind::ParL) {
-				if self.is(1, Kind::Semicolon) {
-					kids.push(self.network()?)
+			let p = if self.is(0, Kind::ParL) {
+				if self.is(1, Kind::Label) {
+					self.network()
 				} else if self.is(1, Kind::ParR) {
-					body.push(self.nothing()?)
+					self.nothing()
 				} else {
-					body.push(self.functor()?)
+					self.functor()
 				}
 			} else {
-				body.push(self.element()?)
+				self.element()
 			};
+			v.push(p?);
 		}
-		Ok((body, kids))
+		Ok(v)
 	}
 }
 

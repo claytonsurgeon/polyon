@@ -78,10 +78,10 @@ fn compile(source: &String) -> Result<String, String> {
     write_file(token_path, &token_string(&tokens));
     //
     //
-    let ast = parser::parser(tokens)?;
-    let ast_path = &mut source.clone();
-    ast_path.push_str(&".ast".to_string());
-    write_file(ast_path, &format!("{:#?}", &ast));
+    let program = parser::parser(tokens)?;
+    let program_path = &mut source.clone();
+    program_path.push_str(&".program".to_string());
+    write_file(program_path, &format!("{:#?}", &program));
 
     // let nmap = parser::parser(&"filename".to_string(), tokens)?;
     // let nmap_path = &mut source.clone();
